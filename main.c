@@ -11,6 +11,12 @@ int main(void)
 
     xTaskCreate(Battery_Task, "Battery", 128, NULL, 2, NULL);
 
+
+    PWM0_Init();
+    LED_Init();
+    ADC0_Init();
+    xTaskCreate(Door_Task, "Door", 128, NULL, 1, NULL);
+
     vTaskStartScheduler();
 
     for (;;);

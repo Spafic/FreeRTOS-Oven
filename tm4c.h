@@ -43,9 +43,9 @@
 
 
 
-#define RED_LED 1
-#define GREEN_LED 3
-#define BLUE_LED 2
+//#define RED_LED 1
+//#define GREEN_LED 3
+//#define BLUE_LED 2
 #define SW2 0   //sw2
 #define SW1 4   //sw1
 
@@ -69,6 +69,15 @@
 
 #define TIMER0 0
 #define UART0 0
+
+#define SYSCTL_RCGCPWM_R         (*((volatile unsigned long *)0x400FE640))
+#define SYSCTL_RCC_R             (*((volatile unsigned long *)0x400FE060))
+#define PWM0_0_CTL_R             (*((volatile unsigned long *)0x40028040))
+#define PWM0_0_GENA_R            (*((volatile unsigned long *)0x40028060))
+#define PWM0_0_LOAD_R            (*((volatile unsigned long *)0x40028050))
+#define PWM0_0_CMPA_R            (*((volatile unsigned long *)0x40028058))
+#define PWM0_ENABLE_R            (*((volatile unsigned long *)0x40028008))
+
 
 //*****************************************************************************
 //
