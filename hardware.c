@@ -26,8 +26,3 @@ void Hardware_BuzzerOff(void)
     GPIO_PORTF_DATA_R &= ~BUZZER_PIN;
 }
 
-void Hardware_DisplayBattery(uint8_t percent)
-{
-    // For now, do nothing (hook to LCD later)
-    (void)percent;
-}
