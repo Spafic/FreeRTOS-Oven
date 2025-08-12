@@ -7,4 +7,6 @@ void Sensors_Init(void);
 uint16_t Sensors_ReadBatteryRaw(void);
 uint8_t Sensors_ReadBatteryPercent(void);
 
+int16_t Sensors_ReadTemperatureC(void);
+
 #endif

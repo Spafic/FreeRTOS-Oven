@@ -444,6 +444,16 @@
               <FileType>5</FileType>
               <FilePath>.\temperature_task.h</FilePath>
             </File>
+            <File>
+              <FileName>debug_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\debug_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>debug_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\debug_task.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -488,6 +498,11 @@
               <FileName>hardware.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\hardware.h</FilePath>
+            </File>
+            <File>
+              <FileName>tm4c123gh6pm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\tm4c123gh6pm.h</FilePath>
             </File>
           </Files>
         </Group>
