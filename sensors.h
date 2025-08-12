@@ -9,4 +9,6 @@ uint8_t Sensors_ReadBatteryPercent(void);
 
 int16_t Sensors_ReadTemperatureC(void);
 
+uint16_t Sensors_ReadDoorPot(void);
+
 #endif

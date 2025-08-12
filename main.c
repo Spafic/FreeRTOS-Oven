@@ -16,7 +16,7 @@ int main(void)
 
     xTaskCreate(Battery_Task, "Battery", 256, NULL, 2, NULL);
     xTaskCreate(Temperature_Task, "Temp", 256, NULL, 2, NULL);
-    xTaskCreate(DoorTask, "Door", 256, NULL, 1, NULL);
+    xTaskCreate(Door_Task, "Door", 256, NULL, 1, NULL);
     xTaskCreate(Debug_Task, "Debug", 128, NULL, 1, NULL);
 
     vTaskStartScheduler();

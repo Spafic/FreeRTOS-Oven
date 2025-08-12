@@ -20,4 +20,8 @@ void Hardware_DisplayTemperature(int16_t temp_c);
 // Initialization
 void Hardware_Init(void);
 
+// Door LED control
+void Hardware_DoorLedOn(void);
+void Hardware_DoorLedOff(void);
+
 #endif

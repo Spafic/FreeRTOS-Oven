@@ -9,6 +9,9 @@
 
 #define DEBUG_LED_PIN (1U << 2) // PF2
 
+#define DOOR_LED_PIN (1U << 4) // PF4
+
+
 void Hardware_Init(void)
 {
     // Enable Port F clock
@@ -16,10 +19,10 @@ void Hardware_Init(void)
     while ((SYSCTL_PRGPIO_R & (1U << 5)) == 0) {}
 
     // PF1 (buzzer), PF2 (debug), PF3 (green LED) as outputs
-    GPIO_PORTF_DIR_R |= (BUZZER_PIN | TEMP_LED_PIN | DEBUG_LED_PIN);
-    GPIO_PORTF_DEN_R |= (BUZZER_PIN | TEMP_LED_PIN | DEBUG_LED_PIN);
+    GPIO_PORTF_DIR_R |= (BUZZER_PIN | TEMP_LED_PIN | DEBUG_LED_PIN | DOOR_LED_PIN);
+    GPIO_PORTF_DEN_R |= (BUZZER_PIN | TEMP_LED_PIN | DEBUG_LED_PIN | DOOR_LED_PIN);
 
-    GPIO_PORTF_DATA_R &= ~(BUZZER_PIN | TEMP_LED_PIN | DEBUG_LED_PIN);
+    GPIO_PORTF_DATA_R &= ~(BUZZER_PIN | TEMP_LED_PIN | DEBUG_LED_PIN | DOOR_LED_PIN);
 }
 
 // -------------------- BUZZER --------------------
@@ -61,4 +64,14 @@ void Hardware_DisplayTemperature(int16_t temp_c)
 void Hardware_DebugLedToggle(void)
 {
     GPIO_PORTF_DATA_R ^= DEBUG_LED_PIN;
+}
+
+void Hardware_DoorLedOn(void)
+{
+    GPIO_PORTF_DATA_R |= DOOR_LED_PIN;
+}
+
+void Hardware_DoorLedOff(void)
+{
+    GPIO_PORTF_DATA_R &= ~DOOR_LED_PIN;
 }
