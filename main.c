@@ -21,7 +21,7 @@
 #include "battery_task.h"
 #include "lcd_task.h"
 #include "buzzer_task.h"
-
+/**/
 /* Task Priorities */
 #define TEMPERATURE_TASK_PRIORITY   3  // High
 #define DOOR_TASK_PRIORITY          2  // Medium-High 
@@ -48,7 +48,14 @@ int main(void) {
     InitGPIO();      // Initialize GPIO ports
     InitADC();       // Initialize ADC
     InitPWM();       // Initialize PWM
-    LCD_Init();      // Initialize LCD
+    
+    /* Initialize LCD with a minimal startup message */
+    LCD_Init();
+    LCD_Clear();
+    LCD_SetCursor(0, 0);
+    LCD_Print("Oven System");
+    LCD_SetCursor(0, 1);
+    LCD_Print("Starting...");
     
     /* Create queues */
     temperatureQueue = xQueueCreate(QUEUE_SIZE, sizeof(TemperatureData));

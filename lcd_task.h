@@ -12,7 +12,7 @@
 #include "task.h"
 
 /* Task Period in ticks */
-#define LCD_TASK_PERIOD             (1000 / portTICK_PERIOD_MS)
+#define LCD_TASK_PERIOD             (200 / portTICK_PERIOD_MS)  // 200ms for more responsive updates
 
 /* Function prototypes */
 void vLCDDisplayTask(void *pvParameters);

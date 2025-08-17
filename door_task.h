@@ -17,6 +17,7 @@
 /* Data structure for door communication */
 typedef struct {
     bool doorOpen;
+    bool sensorError;
 } DoorData;
 
 /* Function prototypes */

@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include "tm4c123gh6pm.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include "lcd.h"
 
 /* LCD I2C Address */
@@ -63,7 +65,6 @@ static uint8_t backlightVal = LCD_BACKLIGHT;
 static void LCD_WriteI2C(uint8_t data);
 static void LCD_WriteCommand(uint8_t command);
 static void LCD_WriteData(uint8_t data);
-static void LCD_Write4Bits(uint8_t value);
 static void LCD_PulseEnable(uint8_t data);
 static void LCD_Delay(uint32_t milliseconds);
 
@@ -111,37 +112,48 @@ void LCD_Init(void) {
     displayControl = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
     displayMode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
     
-    // Wait for LCD to power up
-    LCD_Delay(50);
+    // Enable backlight again
+    backlightVal = LCD_BACKLIGHT;
     
-    // Start in 8-bit mode
-    LCD_WriteI2C(0x00);
-    LCD_Delay(50);
+    // Wait for LCD to power up fully (reduced from 500ms to 200ms)
+    LCD_Delay(200);
     
-    // Put LCD into 4-bit mode
-    LCD_Write4Bits(0x03);
-    LCD_Delay(5);
-    LCD_Write4Bits(0x03);
-    LCD_Delay(5);
-    LCD_Write4Bits(0x03);
-    LCD_Delay(1);
-    LCD_Write4Bits(0x02);
+    // Send reset sequence three times
+    // This is a critical step for proper initialization
+    for (int i = 0; i < 3; i++) {
+        // Send 0x03 (reset) command with EN pulse
+        LCD_WriteI2C(0x30 | backlightVal);  // 0x30 = 0x03 << 4
+        LCD_PulseEnable(0x30 | backlightVal);
+        LCD_Delay(5);  // Reduced from 20ms to 5ms
+    }
     
-    // Set # of lines and font size
+    // Now switch to 4-bit mode
+    LCD_WriteI2C(0x20 | backlightVal);  // 0x20 = 0x02 << 4
+    LCD_PulseEnable(0x20 | backlightVal);
+    LCD_Delay(5);  // Reduced from 20ms
+    
+    // Keep backlight on for visibility
+    backlightVal = LCD_BACKLIGHT;
+    
+    // Function Set - Configure display lines and font
     LCD_WriteCommand(LCD_FUNCTIONSET | displayFunction);
+    LCD_Delay(2);  // Reduced delay
     
-    // Turn the display on with no cursor or blinking
+    // Display Control - Turn display on with no cursor
     LCD_WriteCommand(LCD_DISPLAYCONTROL | displayControl);
+    LCD_Delay(2);  // Reduced delay
     
-    // Clear the display
-    LCD_Clear();
+    // Clear Display
+    LCD_WriteCommand(LCD_CLEARDISPLAY);
+    LCD_Delay(2);  // This command takes a long time
     
-    // Set the entry mode
+    // Set Entry Mode - Left to right
     LCD_WriteCommand(LCD_ENTRYMODESET | displayMode);
+    LCD_Delay(2);  // Reduced delay
     
     // Return home
     LCD_WriteCommand(LCD_RETURNHOME);
-    LCD_Delay(2);
+    LCD_Delay(2);  // Reduced delay
 }
 
 /*
@@ -205,6 +217,8 @@ void LCD_BacklightOn(bool on) {
     LCD_WriteI2C(backlightVal);
 }
 
+
+
 /*
  * Write a byte to the I2C LCD
  * data: Byte to write
@@ -231,8 +245,19 @@ static void LCD_WriteI2C(uint8_t data) {
  * command: Command to write
  */
 static void LCD_WriteCommand(uint8_t command) {
-    LCD_Write4Bits(command >> 4);  // Send high nibble
-    LCD_Write4Bits(command);       // Send low nibble
+    // Send high nibble first
+    uint8_t highnib = command & 0xF0;
+    uint8_t lownib = (command << 4) & 0xF0;
+    
+    // Send high nibble with backlight bit
+    LCD_WriteI2C(highnib | backlightVal);
+    LCD_PulseEnable(highnib | backlightVal);
+    
+    // Send low nibble with backlight bit
+    LCD_WriteI2C(lownib | backlightVal);
+    LCD_PulseEnable(lownib | backlightVal);
+    
+    LCD_Delay(2);
 }
 
 /*
@@ -240,45 +265,59 @@ static void LCD_WriteCommand(uint8_t command) {
  * data: Data to write
  */
 static void LCD_WriteData(uint8_t data) {
-    LCD_Write4Bits((data >> 4) | LCD_RS);  // Send high nibble with RS set
-    LCD_Write4Bits(data | LCD_RS);         // Send low nibble with RS set
+    // Send high nibble first
+    uint8_t highnib = data & 0xF0;
+    uint8_t lownib = (data << 4) & 0xF0;
+    
+    // Send high nibble with RS and backlight bits
+    LCD_WriteI2C(highnib | LCD_RS | backlightVal);
+    LCD_PulseEnable(highnib | LCD_RS | backlightVal);
+    
+    // Send low nibble with RS and backlight bits
+    LCD_WriteI2C(lownib | LCD_RS | backlightVal);
+    LCD_PulseEnable(lownib | LCD_RS | backlightVal);
+    
+    LCD_Delay(1);
 }
 
-/*
- * Write 4 bits to the LCD
- * value: 4 bits to write
- */
-static void LCD_Write4Bits(uint8_t value) {
-    // Combine the 4 bits with the backlight value
-    value = (value << 4) | backlightVal;
-    LCD_PulseEnable(value);
-}
+
 
 /*
  * Pulse the enable pin on the LCD
  * data: Data with the enable bit to pulse
  */
 static void LCD_PulseEnable(uint8_t data) {
-    // Send data with EN bit low
+    // Send with enable bit low
     LCD_WriteI2C(data & ~LCD_EN);
     LCD_Delay(1);
     
-    // Send data with EN bit high
+    // Send with enable bit high
     LCD_WriteI2C(data | LCD_EN);
     LCD_Delay(1);
     
-    // Send data with EN bit low again
+    // Send with enable bit low, latching data on falling edge
     LCD_WriteI2C(data & ~LCD_EN);
     LCD_Delay(1);
 }
 
 /*
- * Delay function using SysTick
+ * Delay function using FreeRTOS when available
  * milliseconds: Number of milliseconds to delay
  */
 static void LCD_Delay(uint32_t milliseconds) {
-    // Simple busy-wait delay function
-    // This is not very accurate and in a real system, you should use a timer
-    volatile uint32_t ui32Loop;
-    for (ui32Loop = 0; ui32Loop < milliseconds * 16000; ui32Loop++) {}
+    // If FreeRTOS is running, use its delay function
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) {
+        // Use smaller delays when RTOS is running to improve responsiveness
+        // This prevents blocking the CPU for unnecessarily long periods
+        if (milliseconds > 10) {
+            milliseconds = 10; // Cap the maximum delay time to 10ms for better responsiveness
+        }
+        vTaskDelay(pdMS_TO_TICKS(milliseconds));
+    } else {
+        // Use busy-wait during initialization (before RTOS starts)
+        // On a Tiva running at 80MHz, each loop takes about 3 cycles
+        // So ~26,667 loops per millisecond (80,000,000 / 3 / 1000)
+        volatile uint32_t ui32Loop;
+        for (ui32Loop = 0; ui32Loop < milliseconds * 26667; ui32Loop++) {}
+    }
 }

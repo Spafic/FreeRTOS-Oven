@@ -35,21 +35,41 @@ void vDoorControlTask(void *pvParameters) {
             lightIntensity = ReadLightSensor();
             xSemaphoreGive(adcMutex);
             
+            /* Error handling - if light sensor reading is invalid (reading failed) */
+            if (lightIntensity < 0.0f) {
+                /* Safety measure: In case of sensor failure, keep door open */
+                SetServoPosition(0);  // 0° = fully open (safety position)
+                doorOpen = true;
+                DOOR_STATUS_LED_ON();  // Indicate door is open
+                
+                /* Set a flag or error indicator if needed */
+                data.doorOpen = doorOpen;
+                data.sensorError = true;  // Indicate sensor error
+                
+                /* Send door status to LCD task */
+                xQueueSend(doorQueue, &data, 0);
+                
+                /* Delay for the task period */
+                vTaskDelay(DOOR_TASK_PERIOD);
+                continue;  // Skip normal processing
+            }
+            
             /* Door control logic */
             if (lightIntensity < LIGHT_THRESHOLD) {
-                /* Open door - obstruction detected */
-                SetServoPosition(0);  // 0° = fully open
+                /* Open door - obstruction detected (low light intensity) */
+                SetServoPosition(0);  // 0° = fully open (rotate servo to 0 degrees)
                 doorOpen = true;
-                DOOR_STATUS_LED_ON();  // PF3 - Green LED on
+                DOOR_STATUS_LED_ON();  // PF3 - Green LED on to indicate door is open
             } else {
-                /* Close door - clear pathway */
-                SetServoPosition(90); // 90° = fully closed
+                /* Close door - clear pathway (high light intensity) */
+                SetServoPosition(90); // 90° = fully closed (rotate servo by 90 degrees)
                 doorOpen = false;
-                DOOR_STATUS_LED_OFF(); // PF3 - Green LED off
+                DOOR_STATUS_LED_OFF(); // PF3 - Green LED off when door is closed
             }
             
             /* Prepare data to send to LCD task */
             data.doorOpen = doorOpen;
+            data.sensorError = false;  // No error for normal operation
             
             /* Send door status to LCD task */
             xQueueSend(doorQueue, &data, 0);

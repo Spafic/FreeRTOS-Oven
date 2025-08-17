@@ -37,13 +37,19 @@ void vTemperatureControlTask(void *pvParameters) {
             
             /* Bang-bang controller logic */
             if (temperature > TEMP_SETPOINT_HIGH) {
-                /* Turn off heater */
+                /* Turn off heater - temperature too high */
                 HEATER_OFF();
                 heaterStatus = false;
+                
+                /* Turn on red LED as warning when temperature exceeds high threshold */
+                GPIO_PORTF_DATA_R |= (1 << 1); // PF1 (Red LED) = 1
             } else if (temperature < TEMP_SETPOINT_LOW) {
-                /* Turn on heater */
+                /* Turn on heater - temperature too low */
                 HEATER_ON();
                 heaterStatus = true;
+                
+                /* Turn off red LED - temperature is normal or low */
+                GPIO_PORTF_DATA_R &= ~(1 << 1); // PF1 (Red LED) = 0
             }
             
             /* Prepare data to send to LCD task */
