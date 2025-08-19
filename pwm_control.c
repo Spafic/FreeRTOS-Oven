@@ -39,8 +39,11 @@ void InitPWM(void) {
     // Set PWM period (50Hz = 20ms)
     PWM0_0_LOAD_R = PWM_PERIOD - 1;
     
-    // Set initial pulse width (0 degrees)
-    PWM0_0_CMPA_R = PWM_PERIOD - (uint32_t)SERVO_MIN_PULSE;
+    // Set initial pulse width to 90 degrees (safe neutral position)
+    {
+        uint32_t midPulse = (uint32_t)(SERVO_MIN_PULSE + ((SERVO_MAX_PULSE - SERVO_MIN_PULSE) / 2));
+        PWM0_0_CMPA_R = PWM_PERIOD - midPulse;
+    }
     
     // Enable PWM0 Generator 0
     PWM0_0_CTL_R |= PWM_0_CTL_ENABLE;
