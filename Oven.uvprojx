@@ -470,16 +470,6 @@
               <FilePath>.\main.c</FilePath>
             </File>
             <File>
-              <FileName>pwm_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\pwm_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_control.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\pwm_control.h</FilePath>
-            </File>
-            <File>
               <FileName>README.md</FileName>
               <FileType>5</FileType>
               <FilePath>.\README.md</FilePath>

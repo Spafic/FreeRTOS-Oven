@@ -18,7 +18,6 @@ This project implements an industrial oven control system using the TM4C123GH6PM
   - Battery Level Sensor (Potentiometer simulation on PE1)
 - **Output Devices**:
   - Heater (LED simulation on PF1)
-  - Door Control (Servo Motor on PB6)
   - LCD Display (16x2 I2C connected to PB2-SCL, PB3-SDA)
   - Low Battery Alarm (Buzzer on PF2)
   - Door Status LED (Green LED on PF3)
@@ -34,7 +33,7 @@ The system is built on FreeRTOS and consists of the following tasks:
 
 2. **Door Control Task (Priority 2)**
 
-   - Reads light sensor and controls servo door position
+   - Reads light sensor and controls door status indication
    - Period: 300ms
 
 3. **Battery Monitor Task (Priority 2)**
@@ -99,6 +98,5 @@ The system is built on FreeRTOS and consists of the following tasks:
 | Heater LED     | PF1          | Digital output |
 | Status LED     | PF3          | Digital output |
 | Buzzer         | PF2          | Digital output |
-| Servo          | PB6 (M0PWM0) | PWM output     |
 | LCD SDA        | PB3          | I2C data       |
 | LCD SCL        | PB2          | I2C clock      |

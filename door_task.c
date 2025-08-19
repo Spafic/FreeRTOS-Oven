@@ -12,7 +12,6 @@
 #include "semphr.h"
 #include "door_task.h"
 #include "adc_control.h"
-#include "pwm_control.h"
 
 /* External queue handle */
 extern QueueHandle_t doorQueue;
@@ -38,7 +37,6 @@ void vDoorControlTask(void *pvParameters) {
             /* Error handling - if light sensor reading is invalid (reading failed) */
             if (lightIntensity < 0.0f) {
                 /* Safety measure: In case of sensor failure, keep door open */
-                SetServoPosition(0);  // 0° = fully open (safety position)
                 doorOpen = true;
                 DOOR_STATUS_LED_ON();  // Indicate door is open
                 
@@ -57,12 +55,10 @@ void vDoorControlTask(void *pvParameters) {
             /* Door control logic */
             if (lightIntensity < LIGHT_THRESHOLD) {
                 /* Open door - obstruction detected (low light intensity) */
-                SetServoPosition(0);  // 0° = fully open (rotate servo to 0 degrees)
                 doorOpen = true;
                 DOOR_STATUS_LED_ON();  // PF3 - Green LED on to indicate door is open
             } else {
                 /* Close door - clear pathway (high light intensity) */
-                SetServoPosition(90); // 90° = fully closed (rotate servo by 90 degrees)
                 doorOpen = false;
                 DOOR_STATUS_LED_OFF(); // PF3 - Green LED off when door is closed
             }

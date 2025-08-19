@@ -13,7 +13,6 @@
 
 /* Project headers */
 #include "adc_control.h"
-#include "pwm_control.h"
 #include "gpio_init.h"
 #include "lcd.h"
 #include "temperature_task.h"
@@ -47,7 +46,6 @@ int main(void) {
     /* Initialize hardware components */
     InitGPIO();      // Initialize GPIO ports
     InitADC();       // Initialize ADC
-    InitPWM();       // Initialize PWM
     
     /* Initialize LCD with a minimal startup message */
     LCD_Init();
