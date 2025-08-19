@@ -38,6 +38,8 @@ void vLCDDisplayTask(void *pvParameters) {
     tempData.heaterActive = false;
     
     /* Initialize the LCD display once */
+    /* Show welcome screen first, then continue to sensor UI */
+    LCD_ShowWelcome();
     LCD_Clear();
     
     /* First line - Temperature and Battery */
@@ -108,7 +110,7 @@ void vLCDDisplayTask(void *pvParameters) {
                 if (doorData.sensorError) {
                     LCD_Print("ERROR");  // Display error if sensor fails
                 } else {
-                    LCD_Print(doorData.doorOpen ? "OPEN " : "CLSD ");
+                    LCD_Print(doorData.doorOpen ? "OPEN " : "CLOSD ");
                 }
                 prevDoor = doorData.doorOpen;
             }

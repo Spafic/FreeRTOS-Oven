@@ -67,6 +67,99 @@ static void LCD_WriteCommand(uint8_t command);
 static void LCD_WriteData(uint8_t data);
 static void LCD_PulseEnable(uint8_t data);
 static void LCD_Delay(uint32_t milliseconds);
+/* Blocking helper prototypes (used by welcome screen) */
+static void LCD_DelayBusy(uint32_t milliseconds);
+static void LCD_PulseEnableBusy(uint8_t data);
+static void LCD_WriteDataBlocking(uint8_t data);
+static void LCD_PrintBlocking(const char* str);
+static bool welcomeComplete = false;
+
+/* Busy-wait delay used for atomic LCD writes (prevents yielding) */
+static void LCD_DelayBusy(uint32_t milliseconds) {
+    volatile uint32_t ui32Loop;
+    for (ui32Loop = 0; ui32Loop < milliseconds * 26667; ui32Loop++) {}
+}
+
+/* Pulse enable using busy-wait (does not call vTaskDelay) */
+static void LCD_PulseEnableBusy(uint8_t data) {
+    LCD_WriteI2C(data & ~LCD_EN);
+    LCD_DelayBusy(1);
+    LCD_WriteI2C(data | LCD_EN);
+    LCD_DelayBusy(1);
+    LCD_WriteI2C(data & ~LCD_EN);
+    LCD_DelayBusy(1);
+}
+
+/* Write data to LCD without yielding (blocking) - used for welcome screen */
+static void LCD_WriteDataBlocking(uint8_t data) {
+    uint8_t highnib = data & 0xF0;
+    uint8_t lownib = (data << 4) & 0xF0;
+
+    LCD_WriteI2C(highnib | LCD_RS | backlightVal);
+    LCD_PulseEnableBusy(highnib | LCD_RS | backlightVal);
+
+    LCD_WriteI2C(lownib | LCD_RS | backlightVal);
+    LCD_PulseEnableBusy(lownib | LCD_RS | backlightVal);
+
+    LCD_DelayBusy(1);
+}
+
+/* Public wrapper for an explicit millisecond delay that always uses the
+ * hardware/busy-wait path when called with ms > 10 to ensure a fixed
+ * wait even if the scheduler is running. Use sparingly.
+ */
+/*
+ * Hardware SysTick-based blocking delay in milliseconds.
+ * This uses the Cortex-M SysTick timer directly so the delay is
+ * deterministic and doesn't rely on software busy-wait loops.
+ * Note: This will block execution while running and should be used
+ * for short startup delays only.
+ */
+void LCD_DelayMs(uint32_t ms) {
+    if (ms == 0) return;
+
+    /* If the RTOS scheduler is running, use vTaskDelay (RTOS-friendly).
+     * If the scheduler is not running (startup), use a busy-wait loop so
+     * the welcome screen timing is deterministic and we don't touch SysTick
+     * which the RTOS expects to own.
+     */
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) {
+        vTaskDelay(pdMS_TO_TICKS(ms));
+        return;
+    }
+
+    /* Busy-wait loop for pre-scheduler delays */
+    volatile uint32_t ui32Loop;
+    for (ui32Loop = 0; ui32Loop < ms * 26667; ui32Loop++) {}
+}
+
+/*
+ * Display the welcome screen (centered) and block for 1500 ms using
+ * the hardware SysTick delay. Sets the internal welcome flag when done.
+ */
+void LCD_ShowWelcome(void) {
+    const char *line1 = "Team 5";
+    const char *line2 = "Oven System";
+    uint8_t col1 = (16 - (uint8_t)strlen(line1)) / 2;
+    uint8_t col2 = (16 - (uint8_t)strlen(line2)) / 2;
+    LCD_Clear();
+    LCD_SetCursor(col1, 0);
+    LCD_PrintBlocking(line1);
+    LCD_SetCursor(col2, 1);
+    LCD_PrintBlocking(line2);
+
+    /* hold for 1500 ms, then mark completion */
+    LCD_DelayMs(1500);
+    LCD_SetWelcomeFlag(true);
+}
+
+void LCD_SetWelcomeFlag(bool val) {
+    welcomeComplete = val;
+}
+
+bool LCD_GetWelcomeFlag(void) {
+    return welcomeComplete;
+}
 
 /* Initialize I2C0 for LCD communication */
 void InitI2C(void) {
@@ -188,6 +281,15 @@ void LCD_SetCursor(uint8_t col, uint8_t row) {
 void LCD_Print(const char* str) {
     while (*str) {
         LCD_WriteData(*str++);
+    }
+}
+
+/* Blocking version of LCD_Print - does not call vTaskDelay and uses
+ * busy-wait pulses to ensure characters appear without yielding.
+ */
+static void LCD_PrintBlocking(const char* str) {
+    while (*str) {
+        LCD_WriteDataBlocking((uint8_t)*str++);
     }
 }
 

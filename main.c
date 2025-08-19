@@ -5,6 +5,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "tm4c123gh6pm.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -47,13 +48,8 @@ int main(void) {
     InitGPIO();      // Initialize GPIO ports
     InitADC();       // Initialize ADC
     
-    /* Initialize LCD with a minimal startup message */
+    /* Initialize LCD */
     LCD_Init();
-    LCD_Clear();
-    LCD_SetCursor(0, 0);
-    LCD_Print("Oven System");
-    LCD_SetCursor(0, 1);
-    LCD_Print("Starting...");
     
     /* Create queues */
     temperatureQueue = xQueueCreate(QUEUE_SIZE, sizeof(TemperatureData));
