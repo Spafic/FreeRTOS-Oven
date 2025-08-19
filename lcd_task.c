@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <limits.h>
+#include <string.h>
 #include "tm4c123gh6pm.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -29,7 +31,8 @@ void vLCDDisplayTask(void *pvParameters) {
     TemperatureData tempData;
     DoorData doorData;
     BatteryData batteryData;
-    char buffer[10]; // Buffer for dynamic values
+    char line0[17]; // Full 16-char line buffer + NUL
+    char line1[17];
     
     /* Initialize default values */
     tempData.temperature = 0.0f;
@@ -42,21 +45,17 @@ void vLCDDisplayTask(void *pvParameters) {
     LCD_ShowWelcome();
     LCD_Clear();
     
-    /* First line - Temperature and Battery */
-    LCD_SetCursor(0, 0);
-    LCD_Print("T:");
-    LCD_SetCursor(9, 0);
-    LCD_Print("B:");
-    
-    /* Second line - Door State and Heater */
-    LCD_SetCursor(0, 1);
-    LCD_Print("D:");
-    LCD_SetCursor(9, 1);
-    LCD_Print("H:");
-    
-    /* Previous state values to detect changes */
-    float prevTemp = -1.0f;
-    int prevBatt = -1;
+    /* Initialize display with placeholders (will be overwritten) */
+    memset(line0, ' ', sizeof(line0)); line0[16] = '\0';
+    memset(line1, ' ', sizeof(line1)); line1[16] = '\0';
+    LCD_SetCursor(0,0);
+    LCD_Print(line0);
+    LCD_SetCursor(0,1);
+    LCD_Print(line1);
+
+    /* Previous state values to detect changes (use ints for stability) */
+    int prevTempInt = INT_MIN;
+    int prevBattInt = INT_MIN;
     bool prevDoor = !doorData.doorOpen;
     bool prevHeater = !tempData.heaterActive;
     
@@ -72,53 +71,48 @@ void vLCDDisplayTask(void *pvParameters) {
             /* Release the ADC mutex immediately after reading */
             xSemaphoreGive(adcMutex);
             
-            /* Update temperature if changed */
-            if (prevTemp != tempData.temperature) {
-                LCD_SetCursor(2, 0);
-                
-                /* Highlight temperature based on thresholds */
-                if (tempData.temperature < 25.0f) {
-                    sprintf(buffer, "%5.1fC", tempData.temperature); /* Below setpoint */
-                } else if (tempData.temperature > 30.0f) {
-                    sprintf(buffer, "%5.1fC", tempData.temperature); /* Above setpoint */
-                } else {
-                    sprintf(buffer, "%5.1fC", tempData.temperature); /* Within range */
+            /* Compute integer representations for stable comparisons */
+            int tempInt = (int)(tempData.temperature + 0.5f);
+            int battInt = (int)(batteryData.batteryLevel + 0.5f);
+
+            bool tempChanged = (tempInt != prevTempInt);
+            bool battChanged = (battInt != prevBattInt);
+            bool doorChanged = (prevDoor != doorData.doorOpen) || doorData.sensorError;
+            bool heaterChanged = (prevHeater != tempData.heaterActive);
+
+            /* If any relevant state changed, rebuild the full lines and write them.
+             * Writing the full 16-char line ensures leftover characters are cleared.
+             */
+            if (tempChanged || battChanged) {
+                /* Format: T:9C  B:95% (no leading padding before numbers) */
+                snprintf(line0, sizeof(line0), "T:%dC  B:%d%%", tempInt, battInt);
+                /* Pad to 16 chars */
+                size_t len0 = strlen(line0);
+                if (len0 < 16) {
+                    memset(line0 + len0, ' ', 16 - len0);
+                    line0[16] = '\0';
                 }
-                
-                LCD_Print(buffer);
-                prevTemp = tempData.temperature;
+                LCD_SetCursor(0,0);
+                LCD_Print(line0);
+
+                prevTempInt = tempInt;
+                prevBattInt = battInt;
             }
-            
-            /* Update battery percentage if changed */
-            if (prevBatt != (int)batteryData.batteryLevel) {
-                LCD_SetCursor(11, 0);
-                
-                /* Highlight battery level when low */
-                if (batteryData.batteryLevel < 20.0f) {
-                    sprintf(buffer, "%.1f%%", batteryData.batteryLevel); /* Low battery */
-                } else {
-                    sprintf(buffer, "%.1f%%", batteryData.batteryLevel); /* Normal battery */
+
+            if (doorChanged || heaterChanged) {
+                /* Door string preference: show full words; show ERROR if sensor fails */
+                const char *doorStr = doorData.sensorError ? "ERR" : (doorData.doorOpen ? "OPEN" : "CLOSED");
+                snprintf(line1, sizeof(line1), "D:%s H:%s", doorStr, tempData.heaterActive ? "ON" : "OFF");
+                /* Pad to 16 chars */
+                size_t len1 = strlen(line1);
+                if (len1 < 16) {
+                    memset(line1 + len1, ' ', 16 - len1);
+                    line1[16] = '\0';
                 }
-                
-                LCD_Print(buffer);
-                prevBatt = (int)batteryData.batteryLevel;
-            }
-            
-            /* Update door status if changed */
-            if (prevDoor != doorData.doorOpen || doorData.sensorError) {
-                LCD_SetCursor(2, 1);
-                if (doorData.sensorError) {
-                    LCD_Print("ERROR");  // Display error if sensor fails
-                } else {
-                    LCD_Print(doorData.doorOpen ? "OPEN " : "CLOSD ");
-                }
+                LCD_SetCursor(0,1);
+                LCD_Print(line1);
+
                 prevDoor = doorData.doorOpen;
-            }
-            
-            /* Update heater status if changed */
-            if (prevHeater != tempData.heaterActive) {
-                LCD_SetCursor(11, 1);
-                LCD_Print(tempData.heaterActive ? "ON " : "OFF");
                 prevHeater = tempData.heaterActive;
             }
         }
